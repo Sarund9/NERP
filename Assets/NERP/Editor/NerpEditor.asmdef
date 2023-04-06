@@ -1,0 +1,20 @@
+{
+    "name": "NerpEditor",
+    "rootNamespace": "NerpEditor",
+    "references": [
+        "GUID:3094ea93add3c67409da8c79e83fd09d",
+        "GUID:df380645f10b7bc4b97d4f5eb6303d95",
+        "GUID:3eae0364be2026648bf74846acb8a731"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
