@@ -19,6 +19,8 @@ float OneMinusReflectivity(float metallic) {
 	return range - metallic * range;
 }
 
+// REVISE TUTORIAL REPOSITORY
+// applyAlphaToDiffuse not used ?????
 BRDF GetBRDF(Surface surface, bool applyAlphaToDiffuse = false) {
 	BRDF brdf;
 	float oneMinusReflectivity = OneMinusReflectivity(surface.metallic);

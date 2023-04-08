@@ -1,4 +1,5 @@
 ﻿using Unity.Collections;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -22,14 +23,22 @@ namespace NerpRuntime
             unlitShaderTagId = new("SRPDefaultUnlit"),
             litShaderTagId = new("NerpLit");
 
-        Lighting lighting = new Lighting();
+        readonly Lighting lighting = new();
 
+        SortingSettings sortingSettings;
+        DrawingSettings drawingSettings;
+        FilteringSettings filteringSettings;
+
+        readonly Material stencilQuad = new(Shader.Find("NERP/Procedural/StencilQuad"));
+        readonly Material stencilToDepth = new(Shader.Find("NERP/Procedural/StencilToDepth"));
+        
         public void Render(ScriptableRenderContext context, Camera camera,
             bool useDynamicBatching, bool useGPUInstancing)
         {
             this.context = context;
             this.camera = camera;
 
+            // Editor only
             PrepareBuffer();
             PrepareForSceneWindow();
             if (!Cull())
@@ -70,29 +79,64 @@ namespace NerpRuntime
 
         void DrawVisibleGeometry(bool useDynamicBatching, bool useGPUInstancing)
         {
-            var sortingSettings = new SortingSettings(camera)
+            sortingSettings = new SortingSettings(camera)
             {
                 criteria = SortingCriteria.CommonOpaque,
             };
-            var drawingSettings = new DrawingSettings(unlitShaderTagId, sortingSettings)
+            drawingSettings = new DrawingSettings(unlitShaderTagId, sortingSettings)
             {
                 enableDynamicBatching = useDynamicBatching,
                 enableInstancing = useGPUInstancing,
             };
             drawingSettings.SetShaderPassName(1, litShaderTagId);
-            var filteringSettings = new FilteringSettings(RenderQueueRange.opaque);
+            filteringSettings = new FilteringSettings(RenderQueueRange.opaque);
 
-            
+            DrawScene();
+        }
+
+        void DrawScene()
+        {
             // OPAQUES
             context.DrawRenderers(
                 cullingResults, ref drawingSettings, ref filteringSettings
             );
-            
 
-            // TODO: PORTALS
+            // RENDER PORTALS
+            if (Camera.main == camera)
+            {
+                foreach (var portal in PortalManager.Instance.AllPortals)
+                {
+                    if (!portal.InViewFrom(camera))
+                        continue;
+
+                    // Draw Portal, sets Stencil
+                    stencilQuad.SetInt("_StencilID", 1);
+                    stencilQuad.SetVector("_PortalExtents", portal.Extents);
+                    buffer.DrawProcedural(
+                        portal.transform.localToWorldMatrix,
+                        stencilQuad, 0,
+                        MeshTopology.Quads, 4);
+
+                    // Blit pass: set depth to 1, using stencil
+                    stencilToDepth.SetInt("_StencilID", 1);
+                    buffer.DrawProcedural(
+                        Matrix4x4.identity,
+                        stencilToDepth, 0,
+                        MeshTopology.Quads, 4);
+
+                    // Set to draw only on stencil 1
+                    // Set camera parameters
+
+
+                    // 
+                }
+            }
+            ExecuteBuffer();
 
             // SKYBOX
             context.DrawSkybox(camera);
+
+            // TODO: WATER
 
             sortingSettings.criteria = SortingCriteria.CommonTransparent;
             drawingSettings.sortingSettings = sortingSettings;
@@ -102,6 +146,7 @@ namespace NerpRuntime
             context.DrawRenderers(
                 cullingResults, ref drawingSettings, ref filteringSettings
             );
+            
         }
 
         void ExecuteBuffer()
