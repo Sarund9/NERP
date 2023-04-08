@@ -1,11 +1,10 @@
-﻿using Unity.Collections;
-using UnityEditor.Experimental.GraphView;
+﻿using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.Rendering;
 
 namespace NerpRuntime
 {
-    public partial class CameraRender
+    public partial class CameraRenderer
     {
         ScriptableRenderContext context;
         Camera camera;
@@ -33,7 +32,7 @@ namespace NerpRuntime
         readonly Material stencilToDepth = new(Shader.Find("NERP/Procedural/StencilToDepth"));
         
         public void Render(ScriptableRenderContext context, Camera camera,
-            bool useDynamicBatching, bool useGPUInstancing)
+            bool useDynamicBatching, bool useGPUInstancing, ShadowSettings shadowSettings)
         {
             this.context = context;
             this.camera = camera;
@@ -41,13 +40,13 @@ namespace NerpRuntime
             // Editor only
             PrepareBuffer();
             PrepareForSceneWindow();
-            if (!Cull())
+            if (!Cull(shadowSettings.maxDistance))
             {
                 return;
             }
 
             Setup();
-            lighting.Setup(context, cullingResults);
+            lighting.Setup(context, cullingResults, shadowSettings);
             // Scene
             DrawVisibleGeometry(useDynamicBatching, useGPUInstancing);
             // Dev
@@ -154,73 +153,15 @@ namespace NerpRuntime
             context.ExecuteCommandBuffer(buffer);
             buffer.Clear();
         }
-        bool Cull()
+        bool Cull(float maxShadowDistance)
         {
             if (camera.TryGetCullingParameters(out var p))
             {
+                p.shadowDistance = Mathf.Min(maxShadowDistance, camera.farClipPlane);
                 cullingResults = context.Cull(ref p);
                 return true;
             }
             return false;
-        }
-    }
-    public class Lighting
-    {
-
-        const string bufferName = "Lighting";
-        const int maxDirLightCount = 4;
-
-        static int
-            dirLightCountId = Shader.PropertyToID("_DirectionalLightCount"),
-            dirLightColorsId = Shader.PropertyToID("_DirectionalLightColors"),
-            dirLightDirectionsId = Shader.PropertyToID("_DirectionalLightDirections");
-
-        static Vector4[]
-            dirLightColors = new Vector4[maxDirLightCount],
-            dirLightDirections = new Vector4[maxDirLightCount];
-
-        CommandBuffer buffer = new CommandBuffer
-        {
-            name = bufferName
-        };
-
-        CullingResults cullingResults;
-
-        public void Setup(ScriptableRenderContext context, CullingResults cullingResults)
-        {
-            this.cullingResults = cullingResults;
-            buffer.BeginSample(bufferName);
-            SetupLights();
-            buffer.EndSample(bufferName);
-            context.ExecuteCommandBuffer(buffer);
-            buffer.Clear();
-        }
-
-        void SetupLights()
-        {
-            NativeArray<VisibleLight> visibleLights = cullingResults.visibleLights;
-            int dirLightCount = 0;
-            for (int i = 0; i < visibleLights.Length; i++)
-            {
-                VisibleLight visibleLight = visibleLights[i];
-                if (visibleLight.lightType == LightType.Directional)
-                {
-                    SetupDirectionalLight(dirLightCount++, ref visibleLight);
-                    if (dirLightCount >= maxDirLightCount)
-                    {
-                        break;
-                    }
-                }
-            }
-
-            buffer.SetGlobalInt(dirLightCountId, visibleLights.Length);
-            buffer.SetGlobalVectorArray(dirLightColorsId, dirLightColors);
-            buffer.SetGlobalVectorArray(dirLightDirectionsId, dirLightDirections);
-        }
-
-        void SetupDirectionalLight(int index, ref VisibleLight visibleLight) {
-            dirLightColors[index] = visibleLight.finalColor;
-            dirLightDirections[index] = -visibleLight.localToWorldMatrix.GetColumn(2);
         }
     }
 }

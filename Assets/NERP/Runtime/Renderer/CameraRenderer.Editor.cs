@@ -5,7 +5,7 @@ using UnityEngine.Profiling;
 
 namespace NerpRuntime
 {
-    public partial class CameraRender
+    public partial class CameraRenderer
     {
         partial void DrawUnsupportedShaders();
         partial void DrawGizmos();
