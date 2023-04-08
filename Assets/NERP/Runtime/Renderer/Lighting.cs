@@ -26,13 +26,17 @@ namespace NerpRuntime
 
         CullingResults cullingResults;
 
+        readonly Shadows shadows = new();
+
         public void Setup(
             ScriptableRenderContext context, CullingResults cullingResults,
             ShadowSettings shadowSettings)
         {
             this.cullingResults = cullingResults;
             buffer.BeginSample(bufferName);
+            shadows.Setup(context, cullingResults, shadowSettings);
             SetupLights();
+            shadows.Render();
             buffer.EndSample(bufferName);
             context.ExecuteCommandBuffer(buffer);
             buffer.Clear();
@@ -63,6 +67,12 @@ namespace NerpRuntime
         void SetupDirectionalLight(int index, ref VisibleLight visibleLight) {
             dirLightColors[index] = visibleLight.finalColor;
             dirLightDirections[index] = -visibleLight.localToWorldMatrix.GetColumn(2);
+            shadows.ReserveDirectionalShadows(visibleLight.light, index);
+        }
+
+        public void Cleanup()
+        {
+            shadows.Cleanup();
         }
     }
 }

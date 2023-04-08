@@ -23,7 +23,7 @@ namespace NerpRuntime
             litShaderTagId = new("NerpLit");
 
         readonly Lighting lighting = new();
-
+        
         SortingSettings sortingSettings;
         DrawingSettings drawingSettings;
         FilteringSettings filteringSettings;
@@ -45,14 +45,18 @@ namespace NerpRuntime
                 return;
             }
 
-            Setup();
+            buffer.BeginSample(SampleName);
+            ExecuteBuffer();
             lighting.Setup(context, cullingResults, shadowSettings);
+            buffer.EndSample(SampleName);
+            Setup();
             // Scene
             DrawVisibleGeometry(useDynamicBatching, useGPUInstancing);
             // Dev
             DrawUnsupportedShaders();
             DrawGizmos();
 
+            lighting.Cleanup();
             Submit();
         }
 
@@ -125,7 +129,7 @@ namespace NerpRuntime
 
                     // Set to draw only on stencil 1
                     // Set camera parameters
-
+                    // buffer.SetViewProjectionMatrices(viewMatrix, projectionMatrix);
 
                     // 
                 }
