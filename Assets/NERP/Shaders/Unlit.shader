@@ -33,5 +33,22 @@ Shader "NERP/Unlit"
 			ENDHLSL
 
 		}
+
+		Pass {
+			Tags {
+				"LightMode" = "ShadowCaster"
+			}
+
+			ColorMask 0
+
+			HLSLPROGRAM
+			#pragma target 3.5
+			#pragma shader_feature _ _SHADOWS_CLIP _SHADOWS_DITHER
+			#pragma multi_compile_instancing
+			#pragma vertex ShadowCasterPassVertex
+			#pragma fragment ShadowCasterPassFragment
+			#include "ShadowCasterPass.hlsl"
+			ENDHLSL
+		}
 	}
 }

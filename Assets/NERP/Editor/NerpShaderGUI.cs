@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -16,6 +17,7 @@ namespace NerpEditor
 
         public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] properties)
         {
+            EditorGUI.BeginChangeCheck();
             base.OnGUI(materialEditor, properties);
 
             editor = materialEditor;
@@ -31,6 +33,11 @@ namespace NerpEditor
                 ClipPreset();
                 FadePreset();
                 TransparentPreset();
+            }
+
+            if (EditorGUI.EndChangeCheck())
+            {
+                SetShadowCasterPass();
             }
         }
         void OpaquePreset()
@@ -93,6 +100,22 @@ namespace NerpEditor
         }
 
         #region Editors
+        enum ShadowMode
+        {
+            On, Clip, Dither, Off
+        }
+
+        ShadowMode Shadows
+        {
+            set
+            {
+                if (SetProperty("_Shadows", (float)value))
+                {
+                    SetKeyword("_SHADOWS_CLIP", value == ShadowMode.Clip);
+                    SetKeyword("_SHADOWS_DITHER", value == ShadowMode.Dither);
+                }
+            }
+        }
 
         bool Clipping
         {
@@ -161,6 +184,19 @@ namespace NerpEditor
                 {
                     m.DisableKeyword(keyword);
                 }
+            }
+        }
+        void SetShadowCasterPass()
+        {
+            MaterialProperty shadows = FindProperty("_Shadows", properties, false);
+            if (shadows == null || shadows.hasMixedValue)
+            {
+                return;
+            }
+            bool enabled = shadows.floatValue < (float)ShadowMode.Off;
+            foreach (Material m in materials.Cast<Material>())
+            {
+                m.SetShaderPassEnabled("ShadowCaster", enabled);
             }
         }
 

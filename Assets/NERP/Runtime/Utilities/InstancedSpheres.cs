@@ -77,7 +77,6 @@ public class InstancedSpheres : MonoBehaviour
             block.SetVectorArray(baseColorId, baseColors);
             block.SetFloatArray(metallicId, metallic);
             block.SetFloatArray(smoothnessId, smoothness);
-            print("DRAW PLZ");
         }
         Graphics.DrawMeshInstanced(mesh, 0, material, matrices, count, block);
     }
