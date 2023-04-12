@@ -7,18 +7,16 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: LitT
+  m_Name: LitIndigoGround
   m_Shader: {fileID: 4800000, guid: b4a9685dd39b0164faa2137065e50abd, type: 3}
   m_ValidKeywords:
-  - _PREMULTIPLY_ALPHA
   - _RECEIVE_SHADOWS
   m_InvalidKeywords:
-  - _ALPHAPREMULTIPLY_ON
   - _SHADOWS_ON
   m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
+  m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: 3000
+  m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
   m_SavedProperties:
@@ -49,7 +47,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: 0687d4eca66dc2b4695c9159c8cac7a2, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
@@ -70,25 +68,25 @@ Material:
     - _Clipping: 0
     - _Cutoff: 0.5
     - _DetailNormalMapScale: 1
-    - _DstBlend: 10
+    - _DstBlend: 0
     - _GlossMapScale: 1
-    - _Glossiness: 0.5
+    - _Glossiness: 0
     - _GlossyReflections: 1
     - _Metallic: 0
-    - _Mode: 3
+    - _Mode: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.02
-    - _PremulAlpha: 1
+    - _PremulAlpha: 0
     - _ReceiveShadows: 1
     - _Shadows: 0
-    - _Smoothness: 0.5
+    - _Smoothness: 0.603
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _UVSec: 0
-    - _ZWrite: 0
+    - _ZWrite: 1
     m_Colors:
-    - _BaseColor: {r: 0.5754717, g: 0.5754717, b: 0.5754717, a: 0.57254905}
-    - _Color: {r: 1, g: 0.9413297, b: 0, a: 1}
+    - _BaseColor: {r: 0.25996336, g: 0.24296905, b: 0.5660378, a: 1}
+    - _Color: {r: 0.764151, g: 0.13336597, b: 0.16487376, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []

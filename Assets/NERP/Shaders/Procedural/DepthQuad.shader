@@ -1,4 +1,4 @@
-Shader "NERP/Procedural/StencilQuad"
+Shader "NERP/Procedural/DepthQuad"
 {
     Properties
     {
@@ -11,7 +11,7 @@ Shader "NERP/Procedural/StencilQuad"
         {
             Cull Off
             ZWrite On
-            Blend Zero Zero
+            Blend Zero One
 
             /*
             Pre Pass:

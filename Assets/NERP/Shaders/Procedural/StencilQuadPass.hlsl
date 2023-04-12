@@ -6,9 +6,7 @@
 struct V2F {
 	float3 positionWS : VAR_POSITION;
 	float4 positionCS : SV_POSITION;
-	// float3 normalWS : VAR_NORMAL;
-	// float2 baseUV : VAR_BASE_UV;
-
+	
 	uint vertex_id : TEXTCOORD0;
 	uint instance_id : TEXTCOORD1;
 };
@@ -45,7 +43,6 @@ V2F StencilQuadVertex(uint vertex_id : SV_VertexID, uint instance_id : SV_Instan
 }
 
 float4 StencilQuadFragment(V2F input) : SV_TARGET {
-	//clip(-1);
 	return 0;
 }
 

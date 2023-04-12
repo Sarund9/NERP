@@ -18,7 +18,7 @@ Shader "NERP/Test/Stencil"
 		}
 		Pass
 		{
-			ZTest Off
+			ZTest On
 			
 
 			HLSLPROGRAM

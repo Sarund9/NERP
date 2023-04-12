@@ -12,11 +12,11 @@ Shader "NERP/Procedural/StencilToDepth"
         {
             Cull Off
             //ZWrite Off
-            //ZTest Off
+            ZTest Off
 
             HLSLPROGRAM
-            #pragma vertex StencilQuadVertex
-            #pragma fragment StencilQuadFragment
+            #pragma vertex StencilToDepthPassVertex
+            #pragma fragment StencilToDepthPassFragment
             #include "StencilToDepthPass.hlsl"
             ENDHLSL
             

@@ -78,7 +78,7 @@ namespace NerpRuntime
             PortalManager.Instance.Unregister(this);
         }
 
-        public bool InViewFrom(Camera camera)
+        public bool InViewFrom(Camera camera, Matrix4x4 viewMatrix)
         {
             GeometryUtility.CalculateFrustumPlanes(camera, testplanes);
             return GeometryUtility.TestPlanesAABB(testplanes, Bounds);
@@ -87,6 +87,24 @@ namespace NerpRuntime
         {
             GeometryUtility.CalculateFrustumPlanes(worldToProjectionMatrix, testplanes);
             return GeometryUtility.TestPlanesAABB(testplanes, Bounds);
+        }
+
+        public void Translate(
+            Matrix4x4 currentView, Matrix4x4 currentProjection,
+            out Matrix4x4 viewMatrix, out Matrix4x4 projectionMatrix)
+        {
+            if (!EndPortal)
+            {
+                viewMatrix = projectionMatrix = default;
+                return;
+            }
+
+            // END ltw, start wtl, camera ltw
+            viewMatrix = EndPortal.transform.localToWorldMatrix
+                * transform.worldToLocalMatrix * currentView.inverse;
+
+            // TODO: Oblique Projection Matrix
+            projectionMatrix = currentProjection;
         }
     }
 

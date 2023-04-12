@@ -24,7 +24,7 @@ float3 IndexOfQuad(uint index) {
 	return pos;
 }
 
-V2F StencilQuadVertex(uint vertex_id : SV_VertexID, uint instance_id : SV_InstanceID) {
+V2F StencilToDepthPassVertex(uint vertex_id : SV_VertexID, uint instance_id : SV_InstanceID) {
 	V2F output;
 
 	float3 positionOS = IndexOfQuad(vertex_id);
@@ -35,8 +35,12 @@ V2F StencilQuadVertex(uint vertex_id : SV_VertexID, uint instance_id : SV_Instan
 }
 
 
-float StencilQuadFragment(V2F input) : SV_DEPTH {
-	return 1; //
+void StencilToDepthPassFragment(V2F input
+	//, out float4 col : SV_TARGET
+	, out float depth : SV_DEPTH
+) {
+	//col = float4(1, 0, 0, 1);
+	depth = 0; // 0 == far
 }
 
 
