@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 
 namespace NerpRuntime
@@ -11,10 +12,31 @@ namespace NerpRuntime
 
 
         [SerializeField]
-        bool debugRender;
+        bool render;
 
+        BoxCollider trigger;
 
-        Plane[] testplanes = new Plane[6];
+        enum Side
+        {
+            Front, // positive local Z
+            Back,  // negative local Z
+        }
+        struct State
+        {
+            public Side side;
+            public bool canCross;
+
+            public State(Side side, bool insideBounds)
+            {
+                this.side = side;
+                this.canCross = insideBounds;
+            }
+        }
+
+        readonly Dictionary<PortalTeleport, State> teleportState = new();
+        readonly HashSet<PortalTeleport> teleports = new();
+
+        readonly Plane[] testplanes = new Plane[6];
 
 
         [field: SerializeField]
@@ -78,17 +100,90 @@ namespace NerpRuntime
             PortalManager.Instance.Unregister(this);
         }
 
-        public bool InViewFrom(Camera camera, Matrix4x4 viewMatrix)
+        private void OnTriggerEnter(Collider other)
         {
+            var tel = other.GetComponent<PortalTeleport>();
+            if (tel)
+            {
+                teleports.Add(tel);
+                teleportState.Add(tel, new(GetSide(other.transform),
+                    CanCross(tel.transform.position)));
+            }
+        }
+        private void OnTriggerExit(Collider other)
+        {
+            var tel = other.GetComponent<PortalTeleport>();
+            if (tel)
+            {
+                teleports.Remove(tel);
+                teleportState.Remove(tel);
+            }
+        }
+
+        private void OnValidate()
+        {
+            if (!trigger)
+            {
+                trigger = GetComponent<BoxCollider>();
+            }
+            if (trigger)
+            {
+                trigger.size = new(Size.x, Size.y, 1);
+                trigger.center = Vector3.zero;
+                trigger.isTrigger = true;
+            }
+        }
+
+        Side GetSide(Transform other)
+        {
+            var at = transform.InverseTransformPoint(other.position);
+
+            return at.z > 0 ? Side.Front : Side.Back;
+        }
+        bool CanCross(Vector3 objectPosition)
+        {
+            var localPosition = transform.InverseTransformPoint(objectPosition);
+
+            return localPosition.x > -Extents.x && localPosition.y > -Extents.y
+                && localPosition.x <  Extents.x && localPosition.y <  Extents.y;
+        }
+
+        private void Update()
+        {
+            if (!EndPortal) return;
+
+            foreach (var tel in teleports)
+            {
+                // Object center must pass through portal
+                var state = teleportState[tel];
+                state.canCross = CanCross(tel.transform.position);
+                
+                var currentSide = GetSide(tel.transform);
+                if (currentSide != state.side)
+                {
+                    if (state.canCross)
+                        tel.Teleport(this);
+                    else
+                        state.side = currentSide;
+                }
+                teleportState[tel] = state;
+            }
+        }
+
+        public bool InViewFrom(Camera camera)
+        {
+            if (!render) return false;
             GeometryUtility.CalculateFrustumPlanes(camera, testplanes);
             return GeometryUtility.TestPlanesAABB(testplanes, Bounds);
         }
         public bool InViewFrom(Matrix4x4 worldToProjectionMatrix)
         {
+            if (!render) return false;
             GeometryUtility.CalculateFrustumPlanes(worldToProjectionMatrix, testplanes);
             return GeometryUtility.TestPlanesAABB(testplanes, Bounds);
         }
 
+        
         public void Translate(
             Matrix4x4 currentView, Matrix4x4 currentProjection,
             out Matrix4x4 viewMatrix, out Matrix4x4 projectionMatrix)
