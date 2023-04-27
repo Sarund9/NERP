@@ -45,7 +45,7 @@ namespace NerpRuntime
             }
             var filteringSettings = FilteringSettings.defaultValue;
             context.DrawRenderers(
-                cullingResults, ref drawingSettings, ref filteringSettings
+                CullingResults, ref drawingSettings, ref filteringSettings
             );
         }
         partial void DrawGizmos()

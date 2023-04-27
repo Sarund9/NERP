@@ -10,15 +10,21 @@ namespace NerpRuntime
     {
         ScriptableRenderContext context;
         Camera camera;
+        ShadowSettings shadowSettings;
 
         const string bufferName = "Render Camera";
+        const int MAX_PORTAL_RECURSION = 2; // - MainCamera
 
         CommandBuffer buffer = new CommandBuffer
         {
             name = bufferName
         };
 
-        CullingResults cullingResults;
+        
+        CullingResults[] cullingResultStack = new CullingResults[MAX_PORTAL_RECURSION];
+        int currentCullingResult = 0;
+
+        public ref CullingResults CullingResults => ref cullingResultStack[currentCullingResult];
 
         static ShaderTagId
             unlitShaderTagId = new("SRPDefaultUnlit"),
@@ -35,11 +41,29 @@ namespace NerpRuntime
         // DEBUG
         Matrix4x4 currentViewMatrix;
 
+        static Matrix4x4 Plane(Vector3 position, Vector3 direction) =>
+            Matrix4x4.TRS(position,
+                Quaternion.LookRotation(direction, Vector3.up),
+                new(1, 1, 0));
+        static readonly Matrix4x4[] portalPlaneValues = new[]
+        {
+            Matrix4x4.identity,
+
+            Plane(new(0, 0, 1), new(0, 0, -1)),
+            Plane(new(0, 0, -1), new(0, 0, 1)),
+            Plane(new(0, 1, 0), new(0, -1, 0)),
+            Plane(new(0, -1, 0), new(0, 1, 0)),
+            Plane(new(1, 0, 0), new(-1, 0, 0)),
+            Plane(new(-1, 0, 0), new(1, 0, 0)),
+        };
+        GraphicsBuffer portalPlaneTable;
+
         public void Render(ScriptableRenderContext context, Camera camera,
             bool useDynamicBatching, bool useGPUInstancing, ShadowSettings shadowSettings)
         {
             this.context = context;
             this.camera = camera;
+            this.shadowSettings = shadowSettings;
 
             if (stencilQuad == null)
             {
@@ -57,14 +81,14 @@ namespace NerpRuntime
             // Editor only
             PrepareBuffer();
             PrepareForSceneWindow();
-            if (!Cull(shadowSettings.maxDistance))
+            if (!Cull(camera, shadowSettings.maxDistance))
             {
                 return;
             }
 
             buffer.BeginSample(SampleName);
             ExecuteBuffer();
-            lighting.Setup(context, cullingResults, shadowSettings);
+            lighting.Setup(context, CullingResults, shadowSettings);
             buffer.EndSample(SampleName);
             Setup();
             // Scene
@@ -77,6 +101,12 @@ namespace NerpRuntime
             Submit();
         }
 
+        public void Dispose()
+        {
+            portalPlaneTable?.Release();
+            portalPlaneTable = null;
+        }
+
         void Setup()
         {
             context.SetupCameraProperties(camera);
@@ -87,6 +117,12 @@ namespace NerpRuntime
                 flags == CameraClearFlags.Color ?
                 camera.backgroundColor.linear : Color.clear);
             buffer.BeginSample(SampleName);
+            ExecuteBuffer();
+
+            portalPlaneTable ??= new(GraphicsBuffer.Target.Structured, 7, 64);
+            portalPlaneTable.SetData(portalPlaneValues, 0, 0, 7);
+            buffer.SetGlobalBuffer("_PortalPlanes", portalPlaneTable);
+
             ExecuteBuffer();
         }
 
@@ -118,21 +154,29 @@ namespace NerpRuntime
 
             
 
-            DrawScene(ref stateBlock, camera.worldToCameraMatrix, camera.projectionMatrix);
+            DrawScene(
+                ref stateBlock, camera.worldToCameraMatrix, camera.projectionMatrix);
         }
+
+        /*
+        MainCamera: 1
+        Depth 1:    2
+        Depth 2:    3
+
+         */
 
         void DrawScene(
             ref RenderStateBlock block,
             Matrix4x4 viewMatrix, Matrix4x4 projectionMatrix,
-            int depth = 1, int stencil = 1)
+            int stencil = 1)
         {
             // OPAQUES
             context.DrawRenderers(
-                cullingResults, ref drawingSettings, ref filteringSettings, ref block
+                CullingResults, ref drawingSettings, ref filteringSettings, ref block
             );
 
             // RENDER PORTALS
-            if (depth > 0 && Camera.main == camera)
+            if (stencil < MAX_PORTAL_RECURSION && Camera.main == camera)
             {
                 foreach (var portal in PortalManager.Instance.AllPortals)
                 {
@@ -144,11 +188,14 @@ namespace NerpRuntime
 
                     // Draw Portal, sets Stencil
                     stencilQuad.SetInt("_StencilID", stencil);
-                    stencilQuad.SetVector("_PortalExtents", portal.Extents);
+                    Vector3 extents = portal.Extents;
+                    extents.z = .2f;
+                    stencilQuad.SetVector("_PortalExtents", extents);
+                    stencilQuad.SetVector("_PortalForward", portal.transform.forward);
                     buffer.DrawProcedural(
                         portal.transform.localToWorldMatrix,
                         stencilQuad, 0,
-                        MeshTopology.Quads, 4);
+                        MeshTopology.Quads, 4, 7);
                     
                     // Blit pass: set depth to 1, using stencil
                     stencilToDepth.SetInt("_StencilID", stencil);
@@ -174,9 +221,19 @@ namespace NerpRuntime
                     buffer.EndSample(portal.gameObject.name + " :: PrePass");
                     ExecuteBuffer();
 
+                    // TODO: New culling data
+                    camera.cullingMatrix = projectionMatrix * viewMatrix;
+                    currentCullingResult++;
+                    Cull(camera, shadowSettings.maxDistance);
+
+                    ExecuteBuffer();
 
                     // Recursively Draw the Scene
-                    DrawScene(ref newBlock, viewMatrix, projectionMatrix, depth - 1, stencil + 1);
+                    DrawScene(ref newBlock,
+                        viewMatrix, projectionMatrix,
+                        stencil + 1);
+
+                    currentCullingResult--;
 
                     buffer.BeginSample(portal.gameObject.name + " :: PostPass");
 
@@ -212,7 +269,7 @@ namespace NerpRuntime
 
             // TRANSPARENTS
             context.DrawRenderers(
-                cullingResults, ref drawingSettings, ref filteringSettings, ref block
+                CullingResults, ref drawingSettings, ref filteringSettings, ref block
             );
         }
 
@@ -221,12 +278,33 @@ namespace NerpRuntime
             context.ExecuteCommandBuffer(buffer);
             buffer.Clear();
         }
-        bool Cull(float maxShadowDistance)
+        bool Cull(Camera camera, float maxShadowDistance)
         {
             if (camera.TryGetCullingParameters(out var p))
             {
                 p.shadowDistance = Mathf.Min(maxShadowDistance, camera.farClipPlane);
-                cullingResults = context.Cull(ref p);
+                
+                CullingResults = context.Cull(ref p);
+                return true;
+            }
+            return false;
+        }
+        bool Cull(Camera camera, float maxShadowDistance, Matrix4x4 view, Matrix4x4 proj)
+        {
+            var prs = new ScriptableCullingParameters
+            {
+                isOrthographic = camera.orthographic,
+                cullingMatrix = camera.cullingMatrix,
+                
+            };
+            
+            if (camera.TryGetCullingParameters(out var p))
+            {
+                p.shadowDistance = Mathf.Min(maxShadowDistance, camera.farClipPlane);
+
+                p.cullingMatrix = camera.cullingMatrix;
+
+                CullingResults = context.Cull(ref p);
                 return true;
             }
             return false;

@@ -57,6 +57,13 @@ namespace NerpRuntime
                 );
             }
         }
+
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            renderer.Dispose();
+        }
     }
 
     [Serializable]
