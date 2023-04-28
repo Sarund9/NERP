@@ -11,7 +11,7 @@ Shader "NERP/Procedural/StencilQuad"
         {
             Cull Off
             ZWrite On
-            Blend Zero Zero
+            Blend One Zero
 
             /*
             Pre Pass:
@@ -29,9 +29,8 @@ Shader "NERP/Procedural/StencilQuad"
             
             Stencil
             {
-                Ref[_StencilID]
                 Comp Always
-                Pass Replace
+                Pass IncrSat
                 Fail Keep
             }
 

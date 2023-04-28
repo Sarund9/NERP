@@ -13,7 +13,7 @@ namespace NerpRuntime
         ShadowSettings shadowSettings;
 
         const string bufferName = "Render Camera";
-        const int MAX_PORTAL_RECURSION = 2; // - MainCamera
+        const int MAX_PORTAL_RECURSION = 1;
 
         CommandBuffer buffer = new CommandBuffer
         {
@@ -36,7 +36,7 @@ namespace NerpRuntime
         DrawingSettings drawingSettings;
         FilteringSettings filteringSettings;
 
-        Material stencilQuad, stencilToDepth, depthQuad;
+        Material stencilQuad, stencilToDepth, stencilDecrement;
 
         // DEBUG
         Matrix4x4 currentViewMatrix;
@@ -73,9 +73,9 @@ namespace NerpRuntime
             {
                 stencilToDepth = new(Shader.Find("NERP/Procedural/StencilToDepth"));
             }
-            if (depthQuad == null)
+            if (stencilDecrement == null)
             {
-                depthQuad = new(Shader.Find("NERP/Procedural/DepthQuad"));
+                stencilDecrement = new(Shader.Find("NERP/Procedural/StencilDecrement"));
             }
 
             // Editor only
@@ -168,7 +168,7 @@ namespace NerpRuntime
         void DrawScene(
             ref RenderStateBlock block,
             Matrix4x4 viewMatrix, Matrix4x4 projectionMatrix,
-            int stencil = 1)
+            int stencil = 0)
         {
             // OPAQUES
             context.DrawRenderers(
@@ -198,7 +198,7 @@ namespace NerpRuntime
                         MeshTopology.Quads, 4, 7);
                     
                     // Blit pass: set depth to 1, using stencil
-                    stencilToDepth.SetInt("_StencilID", stencil);
+                    stencilToDepth.SetInt("_StencilID", stencil + 1);
                     buffer.DrawProcedural(
                         Matrix4x4.identity,
                         stencilToDepth, 0,
@@ -209,7 +209,7 @@ namespace NerpRuntime
                     newBlock.stencilState = new StencilState(
                         compareFunction: CompareFunction.Equal);
                     newBlock.mask = RenderStateMask.Stencil;
-                    newBlock.stencilReference = stencil;
+                    newBlock.stencilReference = stencil + 1;
 
                     // Set camera parameters
                     portal.Translate(viewMatrix, projectionMatrix,
@@ -222,18 +222,17 @@ namespace NerpRuntime
                     ExecuteBuffer();
 
                     // TODO: New culling data
-                    camera.cullingMatrix = projectionMatrix * viewMatrix;
-                    currentCullingResult++;
-                    Cull(camera, shadowSettings.maxDistance);
-
-                    ExecuteBuffer();
+                    //camera.cullingMatrix = projectionMatrix * viewMatrix;
+                    //currentCullingResult++;
+                    //Cull(camera, shadowSettings.maxDistance);
+                    //ExecuteBuffer();
 
                     // Recursively Draw the Scene
                     DrawScene(ref newBlock,
                         viewMatrix, projectionMatrix,
                         stencil + 1);
 
-                    currentCullingResult--;
+                    //currentCullingResult--;
 
                     buffer.BeginSample(portal.gameObject.name + " :: PostPass");
 
@@ -241,11 +240,11 @@ namespace NerpRuntime
                     buffer.SetViewMatrix(viewMatrix);
 
                     // Re-set the stencil
-                    depthQuad.SetInt("_StencilID", stencil - 1);
-                    depthQuad.SetVector("_PortalExtents", portal.Extents);
+                    stencilDecrement.SetInt("_StencilID", stencil);
+
                     buffer.DrawProcedural(
-                        portal.transform.localToWorldMatrix,
-                        depthQuad, 0,
+                        Matrix4x4.identity,
+                        stencilDecrement, 0,
                         MeshTopology.Quads, 4);
 
                     buffer.EndSample(portal.gameObject.name + " :: PostPass");
