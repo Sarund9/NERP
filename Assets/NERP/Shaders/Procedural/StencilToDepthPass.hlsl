@@ -36,10 +36,10 @@ V2F StencilToDepthPassVertex(uint vertex_id : SV_VertexID, uint instance_id : SV
 
 
 void StencilToDepthPassFragment(V2F input
-	//, out float4 col : SV_TARGET
+	, out float4 col : SV_TARGET
 	, out float depth : SV_DEPTH
 ) {
-	//col = float4(1, 0, 0, 1);
+	col = float4(1, 0, 0, 1);
 	depth = 0; // 0 == far
 }
 

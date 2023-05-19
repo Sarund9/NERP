@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Text;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -13,7 +15,7 @@ namespace NerpRuntime
         ShadowSettings shadowSettings;
 
         const string bufferName = "Render Camera";
-        const int MAX_PORTAL_RECURSION = 1;
+        const int MAX_PORTAL_RECURSION = 4;
 
         CommandBuffer buffer = new CommandBuffer
         {
@@ -36,7 +38,11 @@ namespace NerpRuntime
         DrawingSettings drawingSettings;
         FilteringSettings filteringSettings;
 
-        Material stencilQuad, stencilToDepth, stencilDecrement;
+        Material incrementStencil, stencilToDepth, decrementStencil;
+
+        MaterialPropertyBlock stencilQuadBlock;
+
+        bool useDynamicBatching, useGPUInstancing;
 
         // DEBUG
         Matrix4x4 currentViewMatrix;
@@ -64,19 +70,22 @@ namespace NerpRuntime
             this.context = context;
             this.camera = camera;
             this.shadowSettings = shadowSettings;
+            this.useDynamicBatching = useDynamicBatching;
+            this.useGPUInstancing = useGPUInstancing;
 
-            if (stencilQuad == null)
+            if (incrementStencil == null)
             {
-                stencilQuad = new(Shader.Find("NERP/Procedural/StencilQuad"));
+                incrementStencil = new(Shader.Find("NERP/Portals/IncrementStencilQuad"));
             }
             if (stencilToDepth == null)
             {
                 stencilToDepth = new(Shader.Find("NERP/Procedural/StencilToDepth"));
             }
-            if (stencilDecrement == null)
+            if (decrementStencil == null)
             {
-                stencilDecrement = new(Shader.Find("NERP/Procedural/StencilDecrement"));
+                decrementStencil = new(Shader.Find("NERP/Portals/DecrementStencilQuad"));
             }
+            stencilQuadBlock ??= new();
 
             // Editor only
             PrepareBuffer();
@@ -92,7 +101,7 @@ namespace NerpRuntime
             buffer.EndSample(SampleName);
             Setup();
             // Scene
-            DrawVisibleGeometry(useDynamicBatching, useGPUInstancing);
+            DrawVisibleGeometry();
             // Dev
             DrawUnsupportedShaders();
             DrawGizmos();
@@ -133,7 +142,31 @@ namespace NerpRuntime
             context.Submit();
         }
 
-        void DrawVisibleGeometry(bool useDynamicBatching, bool useGPUInstancing)
+        void DrawVisibleGeometry()
+        {
+            var stateBlock = new RenderStateBlock(RenderStateMask.Nothing)
+            {
+                //stencilState = new(true, compareFunction: CompareFunction.Equal),
+            };
+
+            DrawScene(
+                ref stateBlock, camera.worldToCameraMatrix, camera.projectionMatrix);
+
+        }
+
+
+
+        /*
+        MainCamera: 1
+        Depth 1:    2
+        Depth 2:    3
+
+         */
+
+        void DrawScene(
+            ref RenderStateBlock block,
+            in Matrix4x4 viewMatrix, in Matrix4x4 projectionMatrix,
+            int stencil = 0)
         {
             sortingSettings = new SortingSettings(camera)
             {
@@ -147,64 +180,40 @@ namespace NerpRuntime
             drawingSettings.SetShaderPassName(1, litShaderTagId);
             filteringSettings = new FilteringSettings(RenderQueueRange.opaque);
 
-            var stateBlock = new RenderStateBlock(RenderStateMask.Nothing)
-            {
-                //stencilState = new(true, compareFunction: CompareFunction.Equal),
-            };
 
-            
-
-            DrawScene(
-                ref stateBlock, camera.worldToCameraMatrix, camera.projectionMatrix);
-        }
-
-        /*
-        MainCamera: 1
-        Depth 1:    2
-        Depth 2:    3
-
-         */
-
-        void DrawScene(
-            ref RenderStateBlock block,
-            Matrix4x4 viewMatrix, Matrix4x4 projectionMatrix,
-            int stencil = 0)
-        {
             // OPAQUES
             context.DrawRenderers(
                 CullingResults, ref drawingSettings, ref filteringSettings, ref block
             );
+
+            var campos = viewMatrix.GetPosition();
+
 
             // RENDER PORTALS
             if (stencil < MAX_PORTAL_RECURSION && Camera.main == camera)
             {
                 foreach (var portal in PortalManager.Instance.AllPortals)
                 {
-                    if (!portal.InViewFrom(projectionMatrix * viewMatrix)
-                        || !portal.EndPortal || portal.EndPortal == portal)
+                    if (
+                        !portal.InViewFrom(projectionMatrix * viewMatrix) ||
+                        !portal.EndPortal || portal.EndPortal == portal)
                         continue;
 
                     buffer.BeginSample(portal.gameObject.name + " :: PrePass");
 
-                    // Draw Portal, sets Stencil
-                    stencilQuad.SetInt("_StencilID", stencil);
-                    Vector3 extents = portal.Extents;
-                    extents.z = .2f;
-                    stencilQuad.SetVector("_PortalExtents", extents);
-                    stencilQuad.SetVector("_PortalForward", portal.transform.forward);
-                    buffer.DrawProcedural(
-                        portal.transform.localToWorldMatrix,
-                        stencilQuad, 0,
-                        MeshTopology.Quads, 4, 7);
-                    
+                    IncrementStencil(portal);
+
                     // Blit pass: set depth to 1, using stencil
                     stencilToDepth.SetInt("_StencilID", stencil + 1);
                     buffer.DrawProcedural(
                         Matrix4x4.identity,
                         stencilToDepth, 0,
                         MeshTopology.Quads, 4);
-                    
-                    // Set to draw only on stencil 1
+
+                    ExecuteBuffer();
+
+
+                    // Set to draw only on stencil +1
                     var newBlock = block;
                     newBlock.stencilState = new StencilState(
                         compareFunction: CompareFunction.Equal);
@@ -227,9 +236,11 @@ namespace NerpRuntime
                     //Cull(camera, shadowSettings.maxDistance);
                     //ExecuteBuffer();
 
+                    
+
                     // Recursively Draw the Scene
                     DrawScene(ref newBlock,
-                        viewMatrix, projectionMatrix,
+                        newView, newProj,
                         stencil + 1);
 
                     //currentCullingResult--;
@@ -240,12 +251,7 @@ namespace NerpRuntime
                     buffer.SetViewMatrix(viewMatrix);
 
                     // Re-set the stencil
-                    stencilDecrement.SetInt("_StencilID", stencil);
-
-                    buffer.DrawProcedural(
-                        Matrix4x4.identity,
-                        stencilDecrement, 0,
-                        MeshTopology.Quads, 4);
+                    DecrementStencil(portal);
 
                     buffer.EndSample(portal.gameObject.name + " :: PostPass");
                     ExecuteBuffer();
@@ -270,6 +276,33 @@ namespace NerpRuntime
             context.DrawRenderers(
                 CullingResults, ref drawingSettings, ref filteringSettings, ref block
             );
+
+
+            //context.Submit();
+        }
+
+        private void IncrementStencil(Portal portal)
+        {
+            Vector3 extents = portal.Extents;
+            extents.z = .2f;
+            stencilQuadBlock.SetVector("_PortalExtents", extents);
+            stencilQuadBlock.SetVector("_PortalForward", portal.transform.forward);
+            buffer.DrawProcedural(
+                portal.transform.localToWorldMatrix,
+                incrementStencil, 0,
+                MeshTopology.Quads, 4, 7, stencilQuadBlock);
+        }
+
+        private void DecrementStencil(Portal portal)
+        {
+            Vector3 extents = portal.Extents;
+            extents.z = .2f;
+            stencilQuadBlock.SetVector("_PortalExtents", extents);
+            stencilQuadBlock.SetVector("_PortalForward", portal.transform.forward);
+            buffer.DrawProcedural(
+                portal.transform.localToWorldMatrix,
+                decrementStencil, 0,
+                MeshTopology.Quads, 4, 7, stencilQuadBlock);
         }
 
         void ExecuteBuffer()

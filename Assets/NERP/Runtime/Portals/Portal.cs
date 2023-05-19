@@ -180,6 +180,9 @@ namespace NerpRuntime
         {
             if (!render) return false;
             GeometryUtility.CalculateFrustumPlanes(worldToProjectionMatrix, testplanes);
+
+            // TODO: Debug Gizmos to fix Recursive Portals
+
             return GeometryUtility.TestPlanesAABB(testplanes, Bounds);
         }
 

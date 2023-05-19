@@ -19,6 +19,7 @@ Shader "NERP/Unlit"
 		
 		Pass
 		{
+			Name "NERP standart Unlit main pass"
 			Blend[_SrcBlend][_DstBlend]
 			ZWrite[_ZWrite]
 
@@ -35,6 +36,7 @@ Shader "NERP/Unlit"
 		}
 
 		Pass {
+			Name "NERP standart Unlit shadow pass"
 			Tags {
 				"LightMode" = "ShadowCaster"
 			}

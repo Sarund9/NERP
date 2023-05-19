@@ -1,17 +1,18 @@
-Shader "NERP/Procedural/DepthQuad"
+Shader "NERP/Portals/DecrementStencilQuad"
 {
     Properties
     {
-        [IntRange] _StencilID ("Stencil ID", Range(0, 255)) = 0
+        
     }
     SubShader
     {
         
         Pass
         {
+            Name "Stencil Quad --"
             Cull Off
-            ZWrite On
-            Blend Zero One
+            //ZWrite On
+            Blend Zero One // This affects depth, solution: must only affect color
 
             /*
             Pre Pass:
@@ -24,14 +25,16 @@ Shader "NERP/Procedural/DepthQuad"
             HLSLPROGRAM
             #pragma vertex StencilQuadVertex
             #pragma fragment StencilQuadFragment
+
+            int _StencilID;
+
             #include "StencilQuadPass.hlsl"
             ENDHLSL
             
             Stencil
             {
-                Ref[_StencilID]
                 Comp Always
-                Pass Replace
+                Pass DecrSat
                 Fail Keep
             }
 

@@ -25,6 +25,7 @@ Shader "NERP/Lit"
 		
 		Pass
 		{
+			Name "NERP standart Lit main pass"
 			Blend[_SrcBlend][_DstBlend]
 			ZWrite[_ZWrite]
 			Tags {
@@ -47,6 +48,7 @@ Shader "NERP/Lit"
 		}
 
 		Pass {
+			Name "NERP standart Lit shadow pass"
 			Tags {
 				"LightMode" = "ShadowCaster"
 			}

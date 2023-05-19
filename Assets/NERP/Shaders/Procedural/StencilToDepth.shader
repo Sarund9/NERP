@@ -10,6 +10,7 @@ Shader "NERP/Procedural/StencilToDepth"
         
         Pass
         {
+            Name "Stencil to Depth"
             Cull Off
             //ZWrite Off
             ZTest Off
