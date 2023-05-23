@@ -7,8 +7,11 @@ float4x4 unity_WorldToObject;
 float4 unity_LODFade;
 real4 unity_WorldTransformParams;
 
-// Needed to be added for latest versions
-// what the f### is this
+float4 unity_LightmapST;
+float4 unity_DynamicLightmapST;
+
+// Needed to be added for this to work on latest versions
+// what the f### is this for
 float4x4 unity_PrevObjectToWorld;
 float4x4 unity_PrevWorldToObject;
 

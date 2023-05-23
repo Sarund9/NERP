@@ -176,6 +176,7 @@ namespace NerpRuntime
             {
                 enableDynamicBatching = useDynamicBatching,
                 enableInstancing = useGPUInstancing,
+                perObjectData = PerObjectData.Lightmaps,
             };
             drawingSettings.SetShaderPassName(1, litShaderTagId);
             filteringSettings = new FilteringSettings(RenderQueueRange.opaque);
@@ -263,8 +264,9 @@ namespace NerpRuntime
 
             // TODO: How to draw skybox in Stencil Only
 
-            // SKYBOX
-            //context.DrawSkybox(camera);
+            // SKYBOX (Only drawn outside portals)
+            if (stencil == 0)
+                context.DrawSkybox(camera);
 
             // WATER
 
