@@ -24,6 +24,8 @@ namespace NerpEditor
             materials = materialEditor.targets;
             this.properties = properties;
 
+            BakedEmission();
+
             EditorGUILayout.Separator();
             EditorGUILayout.Space();
             showPresets = EditorGUILayout.Foldout(showPresets, "Presets", true);
@@ -40,6 +42,12 @@ namespace NerpEditor
                 SetShadowCasterPass();
             }
         }
+
+        void BakedEmission()
+        {
+            editor.LightmapEmissionProperty();
+        }
+
         void OpaquePreset()
         {
             if (PresetButton("Opaque"))

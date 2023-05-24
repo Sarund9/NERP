@@ -710,7 +710,7 @@ Light:
   m_BounceIntensity: 1
   m_ColorTemperature: 6570
   m_UseColorTemperature: 0
-  m_BoundingSphereOverride: {x: 6.359429e-39, y: 2.2227419e-38, z: 9.1858e-41, w: 3.9048615e-29}
+  m_BoundingSphereOverride: {x: 2.2e-44, y: 2.4405384e-30, z: 9.1858e-41, w: 4.591775e-39}
   m_UseBoundingSphereOverride: 0
   m_UseViewFrustumForShadowCasterCull: 1
   m_ShadowRadius: 0
@@ -2011,14 +2011,14 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1643735141}
-  m_LocalRotation: {x: 0.9993067, y: 0.020742415, z: -0.03088228, w: -0.0015292831}
-  m_LocalPosition: {x: -1.13, y: 1.494, z: -2.05}
+  m_LocalRotation: {x: 0.99865055, y: 0.020798622, z: 0.04758618, w: 0.000102258346}
+  m_LocalPosition: {x: -1.25, y: 1.494, z: -2.2}
   m_LocalScale: {x: 1, y: 1, z: 8}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1722664608}
   m_RootOrder: 1
-  m_LocalEulerAnglesHint: {x: -0.102, y: 183.542, z: 177.619}
+  m_LocalEulerAnglesHint: {x: -0.102, y: 174.546, z: 177.619}
 --- !u!259 &1643735143
 LightProbeProxyVolume:
   m_ObjectHideFlags: 0
@@ -2072,7 +2072,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: f4f844eb2acc0a443a49775c004467aa, type: 2}
+  - {fileID: 2100000, guid: 4e32f5b7a0c141e4f90be70a0adad011, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
