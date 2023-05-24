@@ -45,7 +45,16 @@ namespace NerpEditor
 
         void BakedEmission()
         {
+            EditorGUI.BeginChangeCheck();
             editor.LightmapEmissionProperty();
+            if (EditorGUI.EndChangeCheck())
+            {
+                foreach (var m in editor.targets.Cast<Material>())
+                {
+                    m.globalIlluminationFlags &=
+                        ~MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+                }
+            }
         }
 
         void OpaquePreset()
