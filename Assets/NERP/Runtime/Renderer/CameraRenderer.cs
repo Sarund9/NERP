@@ -176,19 +176,16 @@ namespace NerpRuntime
             {
                 enableDynamicBatching = useDynamicBatching,
                 enableInstancing = useGPUInstancing,
-                perObjectData = PerObjectData.Lightmaps,
+                perObjectData = PerObjectData.Lightmaps | PerObjectData.LightProbe |
+                    PerObjectData.LightProbeProxyVolume,
             };
             drawingSettings.SetShaderPassName(1, litShaderTagId);
             filteringSettings = new FilteringSettings(RenderQueueRange.opaque);
-
 
             // OPAQUES
             context.DrawRenderers(
                 CullingResults, ref drawingSettings, ref filteringSettings, ref block
             );
-
-            var campos = viewMatrix.GetPosition();
-
 
             // RENDER PORTALS
             if (stencil < MAX_PORTAL_RECURSION && Camera.main == camera)
@@ -331,7 +328,8 @@ namespace NerpRuntime
                 cullingMatrix = camera.cullingMatrix,
                 
             };
-            
+            // TODO: Try This
+            //camera.cullingMatrix = projectionMatrix * viewMatrix;
             if (camera.TryGetCullingParameters(out var p))
             {
                 p.shadowDistance = Mathf.Min(maxShadowDistance, camera.farClipPlane);
