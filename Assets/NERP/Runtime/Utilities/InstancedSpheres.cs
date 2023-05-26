@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Rendering;
 using Random = UnityEngine.Random;
 
 [ExecuteInEditMode]
@@ -27,6 +28,9 @@ public class InstancedSpheres : MonoBehaviour
 
     [SerializeField]
     Transform sortFrom;
+
+    [SerializeField]
+    LightProbeProxyVolume lightProbeVolume = null;
 
     // Arrays
     Matrix4x4[] matrices;
@@ -59,7 +63,7 @@ public class InstancedSpheres : MonoBehaviour
             metallic[i] = Random.value < 0.25f ? 1f : 0f;
             smoothness[i] = Random.Range(0.05f, 0.95f);
         }
-        
+        block = null;
     }
 
     void Awake()
@@ -77,7 +81,27 @@ public class InstancedSpheres : MonoBehaviour
             block.SetVectorArray(baseColorId, baseColors);
             block.SetFloatArray(metallicId, metallic);
             block.SetFloatArray(smoothnessId, smoothness);
+
+            if (!lightProbeVolume)
+            {
+                var positions = new Vector3[1023];
+                for (int i = 0; i < matrices.Length; i++)
+                {
+                    positions[i] = matrices[i].GetColumn(3);
+                }
+                var lightProbes = new SphericalHarmonicsL2[1023];
+                LightProbes.CalculateInterpolatedLightAndOcclusionProbes(
+                    positions, lightProbes, null
+                );
+                block.CopySHCoefficientArraysFrom(lightProbes);
+            }
+
         }
-        Graphics.DrawMeshInstanced(mesh, 0, material, matrices, count, block);
+        Graphics.DrawMeshInstanced(
+            mesh, 0, material, matrices, count, block,
+            ShadowCastingMode.On, true, 0, null,
+            lightProbeVolume ?
+                LightProbeUsage.UseProxyVolume : LightProbeUsage.CustomProvided,
+            lightProbeVolume);
     }
 }

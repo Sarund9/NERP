@@ -19,6 +19,10 @@ Shader "NERP/Lit"
 
 		[NoScaleOffset] _EmissionMap("Emission", 2D) = "white" {}
 		[HDR] _EmissionColor("Emission", Color) = (0.0, 0.0, 0.0, 0.0)
+
+		// These are needed for unity lightmapper to function
+		[HideInInspector] _MainTex("Texture for Lightmap", 2D) = "white" {}
+		[HideInInspector] _Color("Color for Lightmap", Color) = (0.5, 0.5, 0.5, 1.0)
 	}
 
 	CustomEditor "NerpEditor.NerpShaderGUI"
