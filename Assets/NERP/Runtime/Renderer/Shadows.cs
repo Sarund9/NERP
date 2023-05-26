@@ -9,15 +9,19 @@ namespace NerpRuntime
 
         const int maxShadowedDirectionalLightCount = 4, maxCascades = 4;
 
-        static string[] directionalFilterKeywords = {
+        static readonly string[] directionalFilterKeywords = {
             "_DIRECTIONAL_PCF3",
             "_DIRECTIONAL_PCF5",
             "_DIRECTIONAL_PCF7",
         };
 
-        static string[] cascadeBlendKeywords = {
+        static readonly string[] cascadeBlendKeywords = {
             "_CASCADE_BLEND_SOFT",
-            "_CASCADE_BLEND_DITHER"
+            "_CASCADE_BLEND_DITHER",
+        };
+
+        static readonly string[] shadowMaskKeywords = {
+            "_SHADOW_MASK_DISTANCE",
         };
 
         static int
@@ -47,6 +51,8 @@ namespace NerpRuntime
 
         ShadowSettings settings;
 
+        bool useShadowMask;
+
         struct ShadowedDirectionalLight
         {
             public int visibleLightIndex;
@@ -68,6 +74,7 @@ namespace NerpRuntime
 		    this.settings = settings;
 
             ShadowedDirectionalLightCount = 0;
+            useShadowMask = false;
         }
 
         public Vector3 ReserveDirectionalShadows(Light light, int visibleLightIndex)
@@ -76,6 +83,15 @@ namespace NerpRuntime
                 light.shadows != LightShadows.None && light.shadowStrength > 0f &&
                 cullingResults.GetShadowCasterBounds(visibleLightIndex, out Bounds b))
             {
+                LightBakingOutput lightBaking = light.bakingOutput;
+                if (
+                    lightBaking.lightmapBakeType == LightmapBakeType.Mixed &&
+                    lightBaking.mixedLightingMode == MixedLightingMode.Shadowmask
+                )
+                {
+                    useShadowMask = true;
+                }
+
                 ShadowedDirectionalLights[ShadowedDirectionalLightCount] =
                     new ShadowedDirectionalLight
                     {
@@ -104,6 +120,11 @@ namespace NerpRuntime
                     32, FilterMode.Bilinear, RenderTextureFormat.Shadowmap
                 );
             }
+
+            buffer.BeginSample(bufferName);
+            SetKeywords(shadowMaskKeywords, useShadowMask ? 0 : -1);
+            buffer.EndSample(bufferName);
+            ExecuteBuffer();
         }
 
         void RenderDirectionalShadows()

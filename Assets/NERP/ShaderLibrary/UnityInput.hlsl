@@ -14,6 +14,9 @@ float4x4 unity_PrevWorldToObject;
 
 float3 _WorldSpaceCameraPos;
 
+// Baked Shadow Probes
+float4 unity_ProbesOcclusion;
+
 // Light Maps
 float4 unity_LightmapST;
 float4 unity_DynamicLightmapST;
