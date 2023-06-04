@@ -21,6 +21,7 @@ namespace NerpRuntime
         };
 
         static readonly string[] shadowMaskKeywords = {
+            "_SHADOW_MASK_ALWAYS",
             "_SHADOW_MASK_DISTANCE",
         };
 
@@ -63,7 +64,7 @@ namespace NerpRuntime
         ShadowedDirectionalLight[] ShadowedDirectionalLights =
             new ShadowedDirectionalLight[maxShadowedDirectionalLightCount * maxCascades];
 
-        int ShadowedDirectionalLightCount;
+        int shadowedDirectionalLightCount;
 
         public void Setup (
 		    ScriptableRenderContext context, CullingResults cullingResults,
@@ -73,15 +74,14 @@ namespace NerpRuntime
 		    this.cullingResults = cullingResults;
 		    this.settings = settings;
 
-            ShadowedDirectionalLightCount = 0;
+            shadowedDirectionalLightCount = 0;
             useShadowMask = false;
         }
 
         public Vector3 ReserveDirectionalShadows(Light light, int visibleLightIndex)
         {
-            if (ShadowedDirectionalLightCount < maxShadowedDirectionalLightCount &&
-                light.shadows != LightShadows.None && light.shadowStrength > 0f &&
-                cullingResults.GetShadowCasterBounds(visibleLightIndex, out Bounds b))
+            if (shadowedDirectionalLightCount < maxShadowedDirectionalLightCount &&
+                light.shadows != LightShadows.None && light.shadowStrength > 0f)
             {
                 LightBakingOutput lightBaking = light.bakingOutput;
                 if (
@@ -92,7 +92,14 @@ namespace NerpRuntime
                     useShadowMask = true;
                 }
 
-                ShadowedDirectionalLights[ShadowedDirectionalLightCount] =
+                if (!cullingResults.GetShadowCasterBounds(
+                    visibleLightIndex, out Bounds b
+                ))
+                {
+                    return new Vector3(-light.shadowStrength, 0f, 0f);
+                }
+
+                ShadowedDirectionalLights[shadowedDirectionalLightCount] =
                     new ShadowedDirectionalLight
                     {
                         visibleLightIndex = visibleLightIndex,
@@ -101,7 +108,7 @@ namespace NerpRuntime
                     };
                 return new Vector3(
                     light.shadowStrength,
-                    settings.directional.cascadeCount * ShadowedDirectionalLightCount++,
+                    settings.directional.cascadeCount * shadowedDirectionalLightCount++,
                     light.shadowNormalBias
                 );
             }
@@ -109,7 +116,7 @@ namespace NerpRuntime
         }
         public void Render()
         {
-            if (ShadowedDirectionalLightCount > 0)
+            if (shadowedDirectionalLightCount > 0)
             {
                 RenderDirectionalShadows();
             }
@@ -122,7 +129,9 @@ namespace NerpRuntime
             }
 
             buffer.BeginSample(bufferName);
-            SetKeywords(shadowMaskKeywords, useShadowMask ? 0 : -1);
+            SetKeywords(shadowMaskKeywords, useShadowMask ?
+                QualitySettings.shadowmaskMode == ShadowmaskMode.Shadowmask ? 0 : 1
+                : -1);
             buffer.EndSample(bufferName);
             ExecuteBuffer();
         }
@@ -141,11 +150,11 @@ namespace NerpRuntime
             buffer.BeginSample(bufferName);
             ExecuteBuffer();
 
-            int tiles = ShadowedDirectionalLightCount * settings.directional.cascadeCount;
+            int tiles = shadowedDirectionalLightCount * settings.directional.cascadeCount;
             int split = tiles <= 1 ? 1 : tiles <= 4 ? 2 : 4;
             int tileSize = atlasSize / split;
 
-            for (int i = 0; i < ShadowedDirectionalLightCount; i++)
+            for (int i = 0; i < shadowedDirectionalLightCount; i++)
             {
                 RenderDirectionalShadows(i, split, tileSize);
             }
