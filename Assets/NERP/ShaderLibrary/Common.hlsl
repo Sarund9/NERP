@@ -29,6 +29,13 @@ float DistanceSquared(float3 pA, float3 pB) {
 	return dot(pA - pB, pA - pB);
 }
 
+void ClipLOD(float2 positionCS, float fade) {
+#if defined(LOD_FADE_CROSSFADE)
+    float dither = InterleavedGradientNoise(positionCS.xy, 0);
+    clip(fade + (fade < 0.0 ? dither : -dither));
+#endif
+}
+
 // Inverse matrix (Not in HLSL)
 float4x4 inverse(float4x4 m) {
     float n11 = m[0][0], n12 = m[1][0], n13 = m[2][0], n14 = m[3][0];
