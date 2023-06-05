@@ -17,6 +17,9 @@ float3 _WorldSpaceCameraPos;
 // Baked Shadow Probes
 float4 unity_ProbesOcclusion;
 
+// Reflection Probe Parameters
+float4 unity_SpecCube0_HDR;
+
 // Light Maps
 float4 unity_LightmapST;
 float4 unity_DynamicLightmapST;

@@ -59,6 +59,7 @@ float4 LitPassFragment(V2F input) : SV_TARGET {
 	surface.alpha = base.a;
 	surface.metallic = GetMetallic(input.baseUV);
 	surface.smoothness = GetSmoothness(input.baseUV);
+	surface.fresnelStrength = GetFresnel(input.baseUV);
 	surface.dither = InterleavedGradientNoise(input.positionCS.xy, 0);
 
 #if defined(_PREMULTIPLY_ALPHA)
@@ -66,7 +67,7 @@ float4 LitPassFragment(V2F input) : SV_TARGET {
 #else
 	BRDF brdf = GetBRDF(surface);
 #endif
-	GI gi = GetGI(GI_FRAGMENT_DATA(input), surface);
+	GI gi = GetGI(GI_FRAGMENT_DATA(input), surface, brdf);
 	float3 color = GetLighting(surface, brdf, gi);
 	color += GetEmission(input.baseUV);
 	return float4(color, surface.alpha);

@@ -176,10 +176,12 @@ namespace NerpRuntime
             {
                 enableDynamicBatching = useDynamicBatching,
                 enableInstancing = useGPUInstancing,
-                perObjectData = PerObjectData.Lightmaps | PerObjectData.ShadowMask |
-                                PerObjectData.LightProbe | PerObjectData.OcclusionProbe |
-                                PerObjectData.LightProbeProxyVolume |
-                                PerObjectData.OcclusionProbeProxyVolume,
+                perObjectData =
+                    PerObjectData.ReflectionProbes |
+                    PerObjectData.Lightmaps | PerObjectData.ShadowMask |
+                    PerObjectData.LightProbe | PerObjectData.OcclusionProbe |
+                    PerObjectData.LightProbeProxyVolume |
+                    PerObjectData.OcclusionProbeProxyVolume,
             };
             drawingSettings.SetShaderPassName(1, litShaderTagId);
             filteringSettings = new FilteringSettings(RenderQueueRange.opaque);
