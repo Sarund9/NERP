@@ -23,6 +23,7 @@ struct V2F {
 	float3 positionWS : VAR_POSITION;
 	float3 normalWS : VAR_NORMAL;
 	float2 baseUV : VAR_BASE_UV;
+	float2 detailUV : VAR_DETAIL_UV;
 	GI_VARYINGS_DATA
 	UNITY_VERTEX_INPUT_INSTANCE_ID
 };
@@ -37,6 +38,7 @@ V2F LitPassVertex(Attributes input) {
 	output.normalWS = TransformObjectToWorldNormal(input.normalOS);
 	
 	output.baseUV = TransformBaseUV(input.baseUV);
+	output.detailUV = TransformDetailUV(input.baseUV);
 	return output;
 }
 
@@ -45,7 +47,7 @@ float4 LitPassFragment(V2F input) : SV_TARGET {
 
 	ClipLOD(input.positionCS.xy, unity_LODFade.x);
 
-	float4 base = GetBase(input.baseUV);
+	float4 base = GetBase(input.baseUV, input.detailUV);
 #if defined(_CLIPPING)
 	clip(base.a - GetCutoff(input.baseUV));
 #endif
@@ -58,7 +60,8 @@ float4 LitPassFragment(V2F input) : SV_TARGET {
 	surface.color = base.rgb;
 	surface.alpha = base.a;
 	surface.metallic = GetMetallic(input.baseUV);
-	surface.smoothness = GetSmoothness(input.baseUV);
+	surface.occlusion = GetOcclusion(input.baseUV);
+	surface.smoothness = GetSmoothness(input.baseUV, input.detailUV);
 	surface.fresnelStrength = GetFresnel(input.baseUV);
 	surface.dither = InterleavedGradientNoise(input.positionCS.xy, 0);
 
